@@ -205,6 +205,8 @@ class DepositTypePage extends StatelessWidget {
                                                 ScaffoldMessenger.of(context).showSnackBar(
                                                   const SnackBar(content: Text('Item deleted')),
                                                 );
+
+                                                Navigator.of(context).pop();
                                               }
                                             },
 
