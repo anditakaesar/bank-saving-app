@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:bank_saving_system/controllers/customer_controller.dart';
 import 'package:bank_saving_system/models/customer_model.dart';
 import 'package:bank_saving_system/views/account_view.dart';
@@ -15,53 +13,41 @@ class CustomerPage extends StatefulWidget {
 
 class _CustomerPageState extends State<CustomerPage> {
   final ScrollController _scrollController = ScrollController();
-  TextEditingController? _nameController;
 
   @override
   void initState() {
     super.initState();
 
-    _scrollController.addListener(() {
-      final controller = Provider.of<CustomerController>(
+    _scrollController.addListener(_scrollListener);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<CustomerController>(context, listen: false).fetchCustomers();
+    });
+  }
+
+  void _scrollListener() {
+    final controller = Provider.of<CustomerController>(context, listen: false);
+    final reachingEnd =
+        _scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent;
+
+    if (reachingEnd && !controller.isLoading && controller.hasMore) {
+      Provider.of<CustomerController>(
         context,
         listen: false,
-      );
-      if (_scrollController.position.pixels >=
-              _scrollController.position.maxScrollExtent &&
-          !controller.isLoading &&
-          controller.hasMore) {
-        Future.microtask(
-          () => {
-            Provider.of<CustomerController>(
-              context,
-              listen: false,
-            ).fetchNextCustomers(),
-          },
-        );
-      }
-    });
-
-    Future.microtask(
-      () => {
-        Provider.of<CustomerController>(
-          context,
-          listen: false,
-        ).fetchCustomers(),
-      },
-    );
+      ).fetchNextCustomers();
+    }
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
-    _nameController?.dispose();
     super.dispose();
   }
 
   Widget buildNewCustomerWidget(BuildContext context) {
-    _nameController ??= TextEditingController();
-    final CustomerController customerController =
-        Provider.of<CustomerController>(context);
+    final nameController = TextEditingController();
+    final controller = Provider.of<CustomerController>(context);
 
     return FractionallySizedBox(
       heightFactor: 0.50,
@@ -89,7 +75,7 @@ class _CustomerPageState extends State<CustomerPage> {
             Expanded(
               child: SingleChildScrollView(
                 child: TextFormField(
-                  controller: _nameController,
+                  controller: nameController,
                   decoration: const InputDecoration(
                     border: UnderlineInputBorder(),
                     labelText: 'Name',
@@ -100,19 +86,17 @@ class _CustomerPageState extends State<CustomerPage> {
 
             ElevatedButton(
               onPressed: () {
-                customerController.createCustomer({
-                  'name': _nameController?.text ?? '',
-                });
+                controller.createCustomer({'name': nameController.text});
 
                 Navigator.pop(context);
 
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'Customer ${_nameController?.text ?? ''} created successfully',
-                    ),
-                  ),
-                );
+                var msg =
+                    controller.error ??
+                    'Customer ${nameController.text} created successfully';
+
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text(msg)));
               },
               child: const Text('Create'),
             ),
@@ -123,10 +107,8 @@ class _CustomerPageState extends State<CustomerPage> {
   }
 
   Widget buildEditCustomerWidget(BuildContext context, Customer customer) {
-    _nameController ??= TextEditingController();
-    _nameController?.text = customer.name;
-    final CustomerController customerController =
-        Provider.of<CustomerController>(context);
+    final nameController = TextEditingController(text: customer.name);
+    final customerController = Provider.of<CustomerController>(context);
 
     return FractionallySizedBox(
       heightFactor: 0.50,
@@ -154,7 +136,7 @@ class _CustomerPageState extends State<CustomerPage> {
             Expanded(
               child: SingleChildScrollView(
                 child: TextFormField(
-                  controller: _nameController,
+                  controller: nameController,
                   decoration: const InputDecoration(
                     border: UnderlineInputBorder(),
                     labelText: 'Name',
@@ -170,14 +152,14 @@ class _CustomerPageState extends State<CustomerPage> {
                   child: ElevatedButton(
                     onPressed: () async {
                       await customerController.updateCustomer(customer.id, {
-                        'name': _nameController?.text ?? '',
+                        'name': nameController.text,
                       });
 
                       if (context.mounted) {
                         Navigator.pop(context);
                         var respMsg =
                             customerController.error ??
-                            'Edit ${_nameController?.text ?? ''} success';
+                            'Edit ${nameController.text} success';
                         ScaffoldMessenger.of(
                           context,
                         ).showSnackBar(SnackBar(content: Text(respMsg)));
@@ -229,7 +211,7 @@ class _CustomerPageState extends State<CustomerPage> {
                           Navigator.pop(context);
                           var respMsg =
                               customerController.error ??
-                              '${_nameController?.text ?? ''} deleted';
+                              '${nameController.text} deleted';
                           ScaffoldMessenger.of(
                             context,
                           ).showSnackBar(SnackBar(content: Text(respMsg)));
@@ -250,8 +232,9 @@ class _CustomerPageState extends State<CustomerPage> {
 
   @override
   Widget build(BuildContext context) {
-    final CustomerController customerController =
-        Provider.of<CustomerController>(context);
+    final CustomerController controller = Provider.of<CustomerController>(
+      context,
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -276,22 +259,20 @@ class _CustomerPageState extends State<CustomerPage> {
 
       body: RefreshIndicator(
         onRefresh: () async {
-          customerController.resetPage();
-          customerController.fetchCustomers();
+          await controller.refresh();
         },
 
         child: ListView.builder(
           padding: EdgeInsets.only(bottom: 100.0),
           controller: _scrollController,
           itemCount:
-              customerController.customers.length +
-              (customerController.isLoading ? 1 : 0),
+              controller.customers.length + (controller.isLoading ? 1 : 0),
           itemBuilder: (context, index) {
-            if (index == customerController.customers.length) {
+            if (index == controller.customers.length) {
               return const Center(child: CircularProgressIndicator());
             }
 
-            final customer = customerController.customers[index];
+            final customer = controller.customers[index];
             return InkWell(
               onTap: () {
                 Navigator.push(

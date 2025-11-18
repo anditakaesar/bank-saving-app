@@ -21,33 +21,34 @@ class CustomerController extends ChangeNotifier {
   bool get hasMore => _hasMore;
   String? get error => _error;
 
-  void resetPage() {
+  Future<void> refresh() async {
     _page = 1;
+    await fetchCustomers();
   }
 
   Future<void> fetchCustomers({bool append = false}) async {
     _isLoading = true;
     _error = null;
+    final int pageToFetch = append ? _page + 1 : 1;
     notifyListeners();
-
-    if (append) {
-      _page++;
-    }
 
     try {
       final response = await _apiUtil.getRequest(
         _customersEndpoint,
-        queryParams: {'page': _page.toString(), 'size': _size.toString()},
+        queryParams: {'page': pageToFetch.toString(), 'size': _size.toString()},
       );
 
       if (response.statusCode == HttpStatus.ok) {
         var fetchedCustomer = CustomerList.fromJson(
           json.decode(response.body),
         ).customers;
+        _hasMore = fetchedCustomer.length == _size;
 
         if (append) {
+          _page = pageToFetch;
           _customers.addAll(fetchedCustomer);
         } else {
+          _page = 1;
           _customers = fetchedCustomer;
         }
       } else {
@@ -56,7 +57,7 @@ class CustomerController extends ChangeNotifier {
     } catch (e) {
       _error = 'Error: $e';
     }
-    _hasMore = _customers.length == _size;
+
     _isLoading = false;
     notifyListeners();
   }
@@ -66,8 +67,8 @@ class CustomerController extends ChangeNotifier {
   }
 
   Future<void> createCustomer(Map<String, dynamic> data) async {
-    final response = await _apiUtil.postRequest(_customersEndpoint, body: data);
     _error = null;
+    final response = await _apiUtil.postRequest(_customersEndpoint, body: data);
 
     try {
       if (response.statusCode == HttpStatus.created) {
@@ -86,12 +87,12 @@ class CustomerController extends ChangeNotifier {
   }
 
   Future<void> updateCustomer(int id, Map<String, dynamic> data) async {
+    _error = null;
     final response = await _apiUtil.patchRequest(
       '$_customersEndpoint/$id',
       body: data,
     );
     final idx = _customers.indexWhere((c) => c.id == id);
-    _error = null;
 
     try {
       if (response.statusCode == HttpStatus.ok) {
@@ -108,9 +109,9 @@ class CustomerController extends ChangeNotifier {
   }
 
   Future<void> deleteCustomer(int id) async {
+    _error = null;
     final response = await _apiUtil.deleteRequest('$_customersEndpoint/$id');
     final idx = _customers.indexWhere((c) => c.id == id);
-    _error = null;
 
     try {
       if (response.statusCode == HttpStatus.ok) {

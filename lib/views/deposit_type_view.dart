@@ -20,34 +20,35 @@ class _DepositTypePageState extends State<DepositTypePage> {
   void initState() {
     super.initState();
 
-    _scrollController.addListener(() {
-      final controller = Provider.of<DepositTypeController>(
+    _scrollController.addListener(_scrollListener);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<DepositTypeController>(
         context,
         listen: false,
-      );
-      if (_scrollController.position.pixels >=
-              _scrollController.position.maxScrollExtent &&
-          !controller.isLoading &&
-          controller.hasMore) {
-        Future.microtask(
-          () => {
-            Provider.of<DepositTypeController>(
-              context,
-              listen: false,
-            ).fetchNext(),
-          },
-        );
-      }
+      ).fetchDepositTypes();
     });
+  }
 
-    Future.microtask(
-      () => {
-        Provider.of<DepositTypeController>(
-          context,
-          listen: false,
-        ).fetchDepositTypes(),
-      },
+  void _scrollListener() {
+    final controller = Provider.of<DepositTypeController>(
+      context,
+      listen: false,
     );
+
+    final reachEnd =
+        _scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent;
+
+    if (reachEnd && !controller.isLoading && controller.hasMore) {
+      Future.microtask(
+        () => {
+          Provider.of<DepositTypeController>(
+            context,
+            listen: false,
+          ).fetchNext(),
+        },
+      );
+    }
   }
 
   @override
@@ -313,8 +314,7 @@ class _DepositTypePageState extends State<DepositTypePage> {
 
       body: RefreshIndicator(
         onRefresh: () async {
-          controller.resetPage();
-          controller.fetchDepositTypes();
+          controller.refresh();
         },
 
         child: ListView.builder(

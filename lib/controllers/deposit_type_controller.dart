@@ -1,12 +1,15 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:bank_saving_system/models/api_response_model.dart';
 import 'package:bank_saving_system/models/deposit_type_model.dart';
 import 'package:bank_saving_system/utils/api.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 
 class DepositTypeController extends ChangeNotifier {
   final _depositTypeEndpoint = '/deposit-types';
+  final _errorFetch = 'Failed to load deposit types';
   final _apiUtil = ApiUtil();
 
   List<DepositType> _depositTypes = [];
@@ -21,43 +24,43 @@ class DepositTypeController extends ChangeNotifier {
   bool get hasMore => _hasMore;
   String? get error => _error;
 
-  void resetPage() {
+  Future<void> refresh() async {
     _page = 1;
+    await fetchDepositTypes();
   }
 
   Future<void> fetchDepositTypes({bool append = false}) async {
     _isLoading = true;
     _error = null;
+    final int pageToFetch = append ? _page + 1 : 1;
     notifyListeners();
-
-    if (append) {
-      _page++;
-    }
 
     try {
       final response = await _apiUtil.getRequest(
         _depositTypeEndpoint,
-        queryParams: {'page': _page.toString(), 'size': _size.toString()},
+        queryParams: {'page': pageToFetch.toString(), 'size': _size.toString()},
       );
 
       if (response.statusCode == HttpStatus.ok) {
         var fetchedDepositTypes = DepositTypeList.fromJson(
           json.decode(response.body),
         ).deposittypes;
+        _hasMore = fetchedDepositTypes.length == _size;
 
         if (append) {
+          _page = pageToFetch;
           _depositTypes.addAll(fetchedDepositTypes);
         } else {
+          _page = 1;
           _depositTypes = fetchedDepositTypes;
         }
       } else {
-        throw Exception('Failed to load deposit types');
+        throw Exception(_errorFetch);
       }
     } catch (e) {
       _error = 'Error: $e';
     }
 
-    _hasMore = _depositTypes.length == _size;
     _isLoading = false;
 
     notifyListeners();
@@ -68,11 +71,12 @@ class DepositTypeController extends ChangeNotifier {
   }
 
   Future<void> createDepositType(Map<String, dynamic> data) async {
+    _error = null;
+    final errorCreateMsg = 'Failed to create deposit type';
     final response = await _apiUtil.postRequest(
       _depositTypeEndpoint,
       body: data,
     );
-    _error = null;
 
     try {
       if (response.statusCode == HttpStatus.created) {
@@ -80,8 +84,13 @@ class DepositTypeController extends ChangeNotifier {
           json.decode(response.body)['body'],
         );
         _depositTypes.add(createdCustomer);
+      } else if (response.statusCode == HttpStatus.conflict) {
+        var message = CommonResponse.fromJson(
+          json.decode(response.body),
+        ).message;
+        _error = message ?? errorCreateMsg;
       } else {
-        throw Exception('Failed to create deposit type');
+        throw Exception(errorCreateMsg);
       }
     } catch (e) {
       _error = 'Error: $e';
@@ -91,12 +100,13 @@ class DepositTypeController extends ChangeNotifier {
   }
 
   Future<void> updateDepositType(int id, Map<String, dynamic> data) async {
+    _error = null;
+    final errorUpdateMsg = 'Failed to update deposit type';
     final response = await _apiUtil.patchRequest(
       '$_depositTypeEndpoint/$id',
       body: data,
     );
     final idx = _depositTypes.indexWhere((c) => c.id == id);
-    _error = null;
 
     try {
       if (response.statusCode == HttpStatus.ok) {
@@ -104,8 +114,13 @@ class DepositTypeController extends ChangeNotifier {
           json.decode(response.body)['body'],
         );
         _depositTypes[idx] = updatedDepositType;
+      } else if (response.statusCode == HttpStatus.conflict) {
+        var message = CommonResponse.fromJson(
+          json.decode(response.body),
+        ).message;
+        _error = message ?? errorUpdateMsg;
       } else {
-        throw Exception('Failed to update deposit type');
+        throw Exception(errorUpdateMsg);
       }
     } catch (e) {
       _error = 'Error: $e';
@@ -115,9 +130,9 @@ class DepositTypeController extends ChangeNotifier {
   }
 
   Future<void> deleteDepositType(int id) async {
+    _error = null;
     final response = await _apiUtil.deleteRequest('$_depositTypeEndpoint/$id');
     final idx = _depositTypes.indexWhere((c) => c.id == id);
-    _error = null;
 
     try {
       if (response.statusCode == HttpStatus.ok) {
