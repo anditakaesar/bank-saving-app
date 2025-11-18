@@ -1,9 +1,15 @@
+import 'package:bank_saving_system/controllers/customer_controller.dart';
 import 'package:bank_saving_system/views/homepage_view.dart';
 import 'package:flutter/material.dart';
-
+import 'package:provider/provider.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(
+    MultiProvider(
+      providers: [ChangeNotifierProvider(create: (_) => CustomerController())],
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {

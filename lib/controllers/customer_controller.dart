@@ -1,49 +1,123 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:bank_saving_system/controllers/base_controller.dart';
+
 import 'package:bank_saving_system/models/customer_model.dart';
+import 'package:bank_saving_system/utils/api.dart';
+import 'package:flutter/foundation.dart';
 
-class CustomerController extends BaseController {
-  Future<CustomerModel> fetchCustomers({int page = 1, int size = 10}) async {
-    final response = await getRequest(
-      '/customers',
-      queryParams: {'page': page.toString(), 'size': size.toString()},
-    );
+class CustomerController extends ChangeNotifier {
+  final _apiUtil = ApiUtil();
 
-    if (response.statusCode == HttpStatus.ok) {
-      return CustomerModel.fromJson(json.decode(response.body));
-    } else {
-      throw Exception('Failed to load customers');
-    }
+  List<Customer> _customers = [];
+  bool _isLoading = false;
+  bool _hasMore = false;
+  String? _error;
+  int _page = 1;
+  final int _size = 10;
+
+  List<Customer> get customers => _customers;
+  bool get isLoading => _isLoading;
+  bool get hasMore => _hasMore;
+  String? get error => _error;
+
+  void resetPage() {
+    _page = 1;
   }
 
-  Future<Customer> createCustomer(Map<String, dynamic> data) async {
-    final response = await postRequest('/customers', body: data);
+  Future<void> fetchCustomers({bool append = false}) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
 
-    if (response.statusCode == HttpStatus.created) {
-      return Customer.fromJson(json.decode(response.body)['body']);
-    } else {
-      throw Exception('Failed to create customer');
+    if (append) {
+      _page++;
     }
+
+    try {
+      final response = await _apiUtil.getRequest(
+        '/customers',
+        queryParams: {'page': _page.toString(), 'size': _size.toString()},
+      );
+
+      if (response.statusCode == HttpStatus.ok) {
+        var fetchedCustomer = CustomerList.fromJson(
+          json.decode(response.body),
+        ).customers;
+        if (append) {
+          _customers.addAll(fetchedCustomer);
+        } else {
+          _customers = fetchedCustomer;
+        }
+      } else {
+        throw Exception('Failed to load customers');
+      }
+    } catch (e) {
+      _error = 'Error: $e';
+    }
+    _hasMore = _customers.length == _size;
+    _isLoading = false;
+    notifyListeners();
   }
 
-  Future<Customer> updateCustomer(int id, Map<String, dynamic> data) async {
-    final response = await patchRequest('/customers/$id', body: data);
-
-    if (response.statusCode == HttpStatus.ok) {
-      return Customer.fromJson(json.decode(response.body)['body']);
-    } else {
-      throw Exception('Failed to update customer');
-    }
+  Future<void> fetchNextCustomers() async {
+    await fetchCustomers(append: true);
   }
 
-  Future<Customer> deleteCustomer(int id) async {
-    final response = await deleteRequest('/customers/$id');
+  Future<void> createCustomer(Map<String, dynamic> data) async {
+    final response = await _apiUtil.postRequest('/customers', body: data);
+    _error = null;
 
-    if (response.statusCode == HttpStatus.ok) {
-      return Customer.fromJson(json.decode(response.body)['body']);
-    } else {
-      throw Exception('Failed to delete customer');
+    try {
+      if (response.statusCode == HttpStatus.created) {
+        var createdCustomer = Customer.fromJson(
+          json.decode(response.body)['body'],
+        );
+        _customers.add(createdCustomer);
+      } else {
+        throw Exception('Failed to create customer');
+      }
+    } catch (e) {
+      _error = 'Error: $e';
     }
+
+    notifyListeners();
+  }
+
+  Future<void> updateCustomer(int id, Map<String, dynamic> data) async {
+    final response = await _apiUtil.patchRequest('/customers/$id', body: data);
+    final idx = _customers.indexWhere((c) => c.id == id);
+    _error = null;
+
+    try {
+      if (response.statusCode == HttpStatus.ok) {
+        var updatedCust = Customer.fromJson(json.decode(response.body)['body']);
+        _customers[idx] = updatedCust;
+      } else {
+        throw Exception('Failed to update customer');
+      }
+    } catch (e) {
+      _error = 'Error: $e';
+    }
+
+    notifyListeners();
+  }
+
+  Future<void> deleteCustomer(int id) async {
+    final response = await _apiUtil.deleteRequest('/customers/$id');
+    final idx = _customers.indexWhere((c) => c.id == id);
+    _error = null;
+
+    try {
+      if (response.statusCode == HttpStatus.ok) {
+        Customer.fromJson(json.decode(response.body)['body']);
+        _customers.removeAt(idx);
+      } else {
+        throw Exception('Failed to delete customer');
+      }
+    } catch (e) {
+      _error = 'Error: $e';
+    }
+
+    notifyListeners();
   }
 }

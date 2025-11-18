@@ -5,21 +5,18 @@ class Customer {
   Customer({required this.id, required this.name});
 
   factory Customer.fromJson(Map<String, dynamic> json) {
-    return Customer(
-      id: json['id'],
-      name: json['name'],
-    );
+    return Customer(id: json['id'], name: json['name']);
   }
 }
 
-class CustomerModel {
-  final List<Customer> customers;
+class CustomerList {
+  List<Customer> customers;
 
-  CustomerModel({required this.customers});
+  CustomerList({required this.customers});
 
-  factory CustomerModel.fromJson(Map<String, dynamic> json) {
+  factory CustomerList.fromJson(Map<String, dynamic> json) {
     var list = json['body']['list'] as List;
     List<Customer> customers = list.map((i) => Customer.fromJson(i)).toList();
-    return CustomerModel(customers: customers);
+    return CustomerList(customers: customers);
   }
 }
