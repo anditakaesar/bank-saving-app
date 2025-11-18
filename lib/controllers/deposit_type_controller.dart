@@ -81,7 +81,50 @@ class DepositTypeController extends ChangeNotifier {
         );
         _depositTypes.add(createdCustomer);
       } else {
-        throw Exception('Failed to deposit type customer');
+        throw Exception('Failed to create deposit type');
+      }
+    } catch (e) {
+      _error = 'Error: $e';
+    }
+
+    notifyListeners();
+  }
+
+  Future<void> updateDepositType(int id, Map<String, dynamic> data) async {
+    final response = await _apiUtil.patchRequest(
+      '$_depositTypeEndpoint/$id',
+      body: data,
+    );
+    final idx = _depositTypes.indexWhere((c) => c.id == id);
+    _error = null;
+
+    try {
+      if (response.statusCode == HttpStatus.ok) {
+        var updatedDepositType = DepositType.fromJson(
+          json.decode(response.body)['body'],
+        );
+        _depositTypes[idx] = updatedDepositType;
+      } else {
+        throw Exception('Failed to update deposit type');
+      }
+    } catch (e) {
+      _error = 'Error: $e';
+    }
+
+    notifyListeners();
+  }
+
+  Future<void> deleteDepositType(int id) async {
+    final response = await _apiUtil.deleteRequest('$_depositTypeEndpoint/$id');
+    final idx = _depositTypes.indexWhere((c) => c.id == id);
+    _error = null;
+
+    try {
+      if (response.statusCode == HttpStatus.ok) {
+        DepositType.fromJson(json.decode(response.body)['body']);
+        _depositTypes.removeAt(idx);
+      } else {
+        throw Exception('Failed to delete deposit type');
       }
     } catch (e) {
       _error = 'Error: $e';

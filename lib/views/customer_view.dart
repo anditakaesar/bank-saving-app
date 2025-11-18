@@ -15,6 +15,7 @@ class CustomerPage extends StatefulWidget {
 
 class _CustomerPageState extends State<CustomerPage> {
   final ScrollController _scrollController = ScrollController();
+  TextEditingController? _nameController;
 
   @override
   void initState() {
@@ -50,8 +51,15 @@ class _CustomerPageState extends State<CustomerPage> {
     );
   }
 
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    _nameController?.dispose();
+    super.dispose();
+  }
+
   Widget buildNewCustomerWidget(BuildContext context) {
-    final TextEditingController nameController = TextEditingController();
+    _nameController ??= TextEditingController();
     final CustomerController customerController =
         Provider.of<CustomerController>(context);
 
@@ -81,7 +89,7 @@ class _CustomerPageState extends State<CustomerPage> {
             Expanded(
               child: SingleChildScrollView(
                 child: TextFormField(
-                  controller: nameController,
+                  controller: _nameController,
                   decoration: const InputDecoration(
                     border: UnderlineInputBorder(),
                     labelText: 'Name',
@@ -93,7 +101,7 @@ class _CustomerPageState extends State<CustomerPage> {
             ElevatedButton(
               onPressed: () {
                 customerController.createCustomer({
-                  'name': nameController.text,
+                  'name': _nameController?.text ?? '',
                 });
 
                 Navigator.pop(context);
@@ -101,7 +109,7 @@ class _CustomerPageState extends State<CustomerPage> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(
-                      'Customer ${nameController.text} created successfully',
+                      'Customer ${_nameController?.text ?? ''} created successfully',
                     ),
                   ),
                 );
@@ -115,10 +123,8 @@ class _CustomerPageState extends State<CustomerPage> {
   }
 
   Widget buildEditCustomerWidget(BuildContext context, Customer customer) {
-    final TextEditingController editNameController = TextEditingController(
-      text: customer.name,
-    );
-
+    _nameController ??= TextEditingController();
+    _nameController?.text = customer.name;
     final CustomerController customerController =
         Provider.of<CustomerController>(context);
 
@@ -148,7 +154,7 @@ class _CustomerPageState extends State<CustomerPage> {
             Expanded(
               child: SingleChildScrollView(
                 child: TextFormField(
-                  controller: editNameController,
+                  controller: _nameController,
                   decoration: const InputDecoration(
                     border: UnderlineInputBorder(),
                     labelText: 'Name',
@@ -164,14 +170,14 @@ class _CustomerPageState extends State<CustomerPage> {
                   child: ElevatedButton(
                     onPressed: () async {
                       await customerController.updateCustomer(customer.id, {
-                        'name': editNameController.text,
+                        'name': _nameController?.text ?? '',
                       });
 
                       if (context.mounted) {
                         Navigator.pop(context);
                         var respMsg =
                             customerController.error ??
-                            'Edit ${editNameController.text} success';
+                            'Edit ${_nameController?.text ?? ''} success';
                         ScaffoldMessenger.of(
                           context,
                         ).showSnackBar(SnackBar(content: Text(respMsg)));
@@ -223,7 +229,7 @@ class _CustomerPageState extends State<CustomerPage> {
                           Navigator.pop(context);
                           var respMsg =
                               customerController.error ??
-                              '${editNameController.text} deleted';
+                              '${_nameController?.text ?? ''} deleted';
                           ScaffoldMessenger.of(
                             context,
                           ).showSnackBar(SnackBar(content: Text(respMsg)));
@@ -327,11 +333,5 @@ class _CustomerPageState extends State<CustomerPage> {
         ),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
   }
 }
