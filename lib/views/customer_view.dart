@@ -1,3 +1,4 @@
+import 'package:bank_saving_system/views/account_view.dart';
 import 'package:flutter/material.dart';
 
 class CustomerPage extends StatelessWidget {
@@ -81,7 +82,7 @@ class CustomerPage extends StatelessWidget {
         children: _listCustomer.map((name) {
           return InkWell(
             onTap: () {
-
+              Navigator.push(context, MaterialPageRoute(builder: (context) => AccountPage(title: name)));
             },
             child: Container(
               padding: EdgeInsets.all(12.0),
