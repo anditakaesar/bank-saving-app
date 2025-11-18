@@ -6,6 +6,7 @@ import 'package:bank_saving_system/utils/api.dart';
 import 'package:flutter/foundation.dart';
 
 class CustomerController extends ChangeNotifier {
+  final _customersEndpoint = '/customers';
   final _apiUtil = ApiUtil();
 
   List<Customer> _customers = [];
@@ -35,7 +36,7 @@ class CustomerController extends ChangeNotifier {
 
     try {
       final response = await _apiUtil.getRequest(
-        '/customers',
+        _customersEndpoint,
         queryParams: {'page': _page.toString(), 'size': _size.toString()},
       );
 
@@ -43,6 +44,7 @@ class CustomerController extends ChangeNotifier {
         var fetchedCustomer = CustomerList.fromJson(
           json.decode(response.body),
         ).customers;
+
         if (append) {
           _customers.addAll(fetchedCustomer);
         } else {
@@ -64,7 +66,7 @@ class CustomerController extends ChangeNotifier {
   }
 
   Future<void> createCustomer(Map<String, dynamic> data) async {
-    final response = await _apiUtil.postRequest('/customers', body: data);
+    final response = await _apiUtil.postRequest(_customersEndpoint, body: data);
     _error = null;
 
     try {
@@ -84,7 +86,10 @@ class CustomerController extends ChangeNotifier {
   }
 
   Future<void> updateCustomer(int id, Map<String, dynamic> data) async {
-    final response = await _apiUtil.patchRequest('/customers/$id', body: data);
+    final response = await _apiUtil.patchRequest(
+      '$_customersEndpoint/$id',
+      body: data,
+    );
     final idx = _customers.indexWhere((c) => c.id == id);
     _error = null;
 
@@ -103,7 +108,7 @@ class CustomerController extends ChangeNotifier {
   }
 
   Future<void> deleteCustomer(int id) async {
-    final response = await _apiUtil.deleteRequest('/customers/$id');
+    final response = await _apiUtil.deleteRequest('$_customersEndpoint/$id');
     final idx = _customers.indexWhere((c) => c.id == id);
     _error = null;
 

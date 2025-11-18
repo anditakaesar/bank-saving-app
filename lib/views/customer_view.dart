@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bank_saving_system/controllers/customer_controller.dart';
 import 'package:bank_saving_system/models/customer_model.dart';
 import 'package:bank_saving_system/views/account_view.dart';
@@ -165,13 +167,15 @@ class _CustomerPageState extends State<CustomerPage> {
                         'name': editNameController.text,
                       });
 
-                      Navigator.pop(context);
-                      var respMsg =
-                          customerController.error ??
-                          'Edit ${editNameController.text} success';
-                      ScaffoldMessenger.of(
-                        context,
-                      ).showSnackBar(SnackBar(content: Text(respMsg)));
+                      if (context.mounted) {
+                        Navigator.pop(context);
+                        var respMsg =
+                            customerController.error ??
+                            'Edit ${editNameController.text} success';
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(SnackBar(content: Text(respMsg)));
+                      }
                     },
                     child: const Text('Save'),
                   ),
@@ -214,13 +218,16 @@ class _CustomerPageState extends State<CustomerPage> {
 
                       if (confirm == true) {
                         await customerController.deleteCustomer(customer.id);
-                        Navigator.pop(context);
-                        var respMsg =
-                            customerController.error ??
-                            '${editNameController.text} deleted';
-                        ScaffoldMessenger.of(
-                          context,
-                        ).showSnackBar(SnackBar(content: Text(respMsg)));
+
+                        if (context.mounted) {
+                          Navigator.pop(context);
+                          var respMsg =
+                              customerController.error ??
+                              '${editNameController.text} deleted';
+                          ScaffoldMessenger.of(
+                            context,
+                          ).showSnackBar(SnackBar(content: Text(respMsg)));
+                        }
                       }
                     },
 

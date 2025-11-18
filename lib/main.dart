@@ -1,4 +1,5 @@
 import 'package:bank_saving_system/controllers/customer_controller.dart';
+import 'package:bank_saving_system/controllers/deposit_type_controller.dart';
 import 'package:bank_saving_system/views/homepage_view.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -6,7 +7,10 @@ import 'package:provider/provider.dart';
 void main() {
   runApp(
     MultiProvider(
-      providers: [ChangeNotifierProvider(create: (_) => CustomerController())],
+      providers: [
+        ChangeNotifierProvider(create: (_) => CustomerController()),
+        ChangeNotifierProvider(create: (_) => DepositTypeController()),
+      ],
       child: const MyApp(),
     ),
   );
